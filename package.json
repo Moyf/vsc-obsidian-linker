@@ -1,0 +1,112 @@
+{
+  "name": "obsidian-linker",
+  "displayName": "Obsidian Linker",
+  "description": "Obsidian-style [[wikilinks]] in VS Code: Ctrl/Cmd+Click to open notes, hover actions, and open the current file in Obsidian.",
+  "version": "0.1.0",
+  "publisher": "moy",
+  "license": "MIT",
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "markdown",
+    "wikilink",
+    "obsidian",
+    "zettelkasten"
+  ],
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "activationEvents": [
+    "onLanguage:markdown"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "configuration": {
+      "title": "Obsidian Linker",
+      "properties": {
+        "obsidian-linker.openMode": {
+          "type": "string",
+          "default": "default",
+          "enum": [
+            "default",
+            "newTab",
+            "split"
+          ],
+          "enumDescriptions": [
+            "VS Code 默认行为：在当前编辑器组打开（可复用预览标签页）",
+            "在当前编辑器组打开固定（非预览）标签页",
+            "在右侧分屏打开"
+          ],
+          "description": "打开 [[wikilink]] 的方式（Ctrl/Cmd+Click、命令与悬浮按钮均生效）。修改后需重新打开文件或编辑一次以刷新链接。"
+        },
+        "obsidian-linker.vaultName": {
+          "type": "string",
+          "default": "",
+          "description": "Obsidian 库名称（用于「在 Obsidian 中打开」命令）。假定工作区根目录即仓库根目录。"
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "obsidian-linker.open",
+        "title": "Obsidian Linker: Open Note Under Cursor",
+        "enablement": "editorLangId == markdown"
+      },
+      {
+        "command": "obsidian-linker.openInObsidian",
+        "title": "Obsidian Linker: Open Current File in Obsidian",
+        "icon": "$(book)",
+        "enablement": "resourceLangId == markdown"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "obsidian-linker.openInObsidian",
+          "when": "resourceLangId == markdown",
+          "group": "navigation@100"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "obsidian-linker.openInObsidian",
+          "when": "resourceLangId == markdown",
+          "group": "wikilink@1"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "obsidian-linker.openInObsidian",
+          "when": "resourceLangId == markdown"
+        },
+        {
+          "command": "obsidian-linker.open",
+          "when": "editorLangId == markdown"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "obsidian-linker.open",
+        "key": "ctrl+alt+o",
+        "mac": "cmd+alt+o",
+        "when": "editorTextFocus"
+      }
+    ]
+  },
+  "scripts": {
+    "compile": "node ./esbuild.js",
+    "watch": "node ./esbuild.js --watch",
+    "check": "tsc --noEmit",
+    "test": "node ./esbuild.js --tests && node --test out-test/test/wikilink.test.js",
+    "package": "node ./esbuild.js --production",
+    "vscode:prepublish": "npm run package"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@types/vscode": "^1.80.0",
+    "esbuild": "^0.23.1",
+    "typescript": "^5.5.4"
+  }
+}

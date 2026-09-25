@@ -1,0 +1,9 @@
+.vscode/**
+src/**
+out-test/**
+node_modules/**
+esbuild.js
+.gitignore
+.gitattributes
+package-lock.json
+**/*.map
