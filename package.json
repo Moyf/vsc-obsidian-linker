@@ -2,7 +2,7 @@
   "name": "obsidian-linker",
   "displayName": "Obsidian Linker",
   "description": "Obsidian-style [[wikilinks]] for VS Code: Ctrl/Cmd+Click to open notes (new tab / split), hover actions, and open the current file in Obsidian.",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "publisher": "Moy",
   "icon": "icon.png",
   "license": "MIT",
