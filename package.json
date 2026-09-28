@@ -80,7 +80,7 @@
       {
         "command": "obsidian-linker.openInObsidian",
         "title": "Obsidian Linker: Open Current File in Obsidian",
-        "icon": "$(book)",
+        "icon": "$(ruby)",
         "enablement": "resourceLangId == markdown"
       }
     ],

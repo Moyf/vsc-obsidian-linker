@@ -33,7 +33,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
   const statusItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 50);
   statusItem.name = 'Obsidian Linker';
-  statusItem.text = '$(book) Obsidian';
+  statusItem.text = '$(ruby) Obsidian';
   statusItem.tooltip = 'Open current file in Obsidian';
   statusItem.command = CMD_OBSIDIAN;
   const updateStatusItem = () => {
