@@ -71,6 +71,9 @@ obsidian://open?vault=<vaultName>&path=<absolute-file-path>
 | --- | --- | --- |
 | `obsidian-linker.openMode` | `default` | How to open notes: `default` / `newTab` / `split` |
 | `obsidian-linker.vaultName` | empty | Optional Obsidian vault name used by "Open in Obsidian" |
+| `obsidian-linker.indexOnlyMarkdown` | `false` | Index only `.md` files. Saves memory for large vaults, but links to images / PDFs / canvases will not resolve |
+| `obsidian-linker.indexExclude` | `[]` | Glob patterns excluded from the index, relative to the workspace root (e.g. `[".trash/**"]`). Settable per project in `.vscode/settings.json` |
+| `obsidian-linker.indexLimit` | `0` | Max files to index. `0` = unlimited (memory grows with vault size, ~1KB per file). If set too low, notes beyond the limit are not indexed and their links show "Note not found" |
 
 ## Development
 

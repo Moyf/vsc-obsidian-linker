@@ -2,7 +2,7 @@
   "name": "obsidian-linker",
   "displayName": "Obsidian Linker",
   "description": "Obsidian-style [[wikilinks]] for VS Code: Ctrl/Cmd+Click to open notes (new tab / split), hover actions, and open the current file in Obsidian.",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "publisher": "Moy",
   "icon": "icon.png",
   "license": "MIT",
@@ -49,6 +49,25 @@
           "type": "string",
           "default": "",
           "description": "Optional Obsidian vault name used by 'Open in Obsidian'. When empty, Obsidian resolves the vault from the absolute path automatically."
+        },
+        "obsidian-linker.indexOnlyMarkdown": {
+          "type": "boolean",
+          "default": false,
+          "description": "Index only Markdown (.md) files. Saves memory for large vaults, but wikilinks to images, PDFs, canvases, etc. will no longer resolve."
+        },
+        "obsidian-linker.indexExclude": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "Glob patterns of files/folders to exclude from the index, relative to the workspace folder (e.g. [\".trash/**\", \"attachments/archive/**\"]). Can be set per project in .vscode/settings.json. The index rebuilds automatically when this changes."
+        },
+        "obsidian-linker.indexLimit": {
+          "type": "number",
+          "default": 0,
+          "minimum": 0,
+          "description": "Maximum number of files to index. 0 (default) means no limit: every file is indexed and memory usage grows with vault size (roughly 1KB per file). If a limit is set and the vault has more files, files beyond the limit are NOT indexed and their wikilinks will show \"Note not found\"."
         }
       }
     },

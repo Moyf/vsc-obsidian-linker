@@ -7,6 +7,19 @@ export function getOpenMode(): OpenMode {
   return vscode.workspace.getConfiguration('obsidian-linker').get<OpenMode>('openMode', 'default');
 }
 
+function indexOnlyMarkdown(): boolean {
+  return vscode.workspace.getConfiguration('obsidian-linker').get<boolean>('indexOnlyMarkdown', false);
+}
+
+function indexExclude(): string[] {
+  const patterns = vscode.workspace.getConfiguration('obsidian-linker').get<string[]>('indexExclude', []);
+  return patterns.map((p) => p.trim()).filter(Boolean);
+}
+
+function indexLimit(): number {
+  return Math.max(0, Math.floor(vscode.workspace.getConfiguration('obsidian-linker').get<number>('indexLimit', 0)));
+}
+
 interface Entry {
   uri: vscode.Uri;
   /** Lowercase, posix separators, workspace-folder-relative path. */
@@ -33,7 +46,13 @@ export class NoteIndex implements vscode.Disposable {
       vscode.workspace.onDidDeleteFiles(() => this.invalidate()),
       vscode.workspace.onDidRenameFiles(() => this.invalidate()),
       vscode.workspace.onDidChangeConfiguration((e) => {
-        if (e.affectsConfiguration('files.exclude') || e.affectsConfiguration('search.exclude')) {
+        if (
+          e.affectsConfiguration('files.exclude') ||
+          e.affectsConfiguration('search.exclude') ||
+          e.affectsConfiguration('obsidian-linker.indexOnlyMarkdown') ||
+          e.affectsConfiguration('obsidian-linker.indexExclude') ||
+          e.affectsConfiguration('obsidian-linker.indexLimit')
+        ) {
           this.invalidate();
         }
       }),
@@ -61,7 +80,14 @@ export class NoteIndex implements vscode.Disposable {
     }
     const stamp = this.epoch;
     this.building = (async () => {
-      const uris = await vscode.workspace.findFiles('**/*', undefined, 20000);
+      const include = indexOnlyMarkdown() ? '**/*.md' : '**/*';
+      const exclude = indexExclude();
+      const limit = indexLimit();
+      const uris = await vscode.workspace.findFiles(
+        include,
+        exclude.length ? `{${exclude.join(',')}}` : undefined,
+        limit > 0 ? limit : undefined,
+      );
       if (stamp !== this.epoch) {
         return;
       }
@@ -173,7 +199,7 @@ export class NoteIndex implements vscode.Disposable {
     if (!folder) {
       return path.basename(uri.fsPath).toLowerCase();
     }
-    const rel = path.relative(path.dirname(folder.uri.fsPath), uri.fsPath);
+    const rel = path.relative(folder.uri.fsPath, uri.fsPath);
     return rel.split(path.sep).join('/').toLowerCase();
   }
 }

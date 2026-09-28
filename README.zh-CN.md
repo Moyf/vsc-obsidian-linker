@@ -72,6 +72,9 @@ obsidian://open?vault=<库名>&path=<文件绝对路径>
 | --- | --- | --- |
 | `obsidian-linker.openMode` | `default` | 打开笔记的方式：`default` / `newTab` / `split` |
 | `obsidian-linker.vaultName` | 空 | 可选。Obsidian 库名，用于「在 Obsidian 中打开」 |
+| `obsidian-linker.indexOnlyMarkdown` | `false` | 仅索引 `.md` 文件。省内存，但图片 / PDF / canvas 等链接将无法解析 |
+| `obsidian-linker.indexExclude` | `[]` | 索引时排除的 glob 模式，相对于工作区根目录（如 `[".trash/**"]`）。可在 `.vscode/settings.json` 中按项目配置 |
+| `obsidian-linker.indexLimit` | `0` | 索引文件数上限。`0` = 不限制（内存随库大小增长，约 1KB/文件）。设置过低时，超限的笔记不会被索引，其链接会提示「Note not found」 |
 
 ## 开发
 
