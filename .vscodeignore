@@ -6,4 +6,6 @@ esbuild.js
 .gitignore
 .gitattributes
 package-lock.json
+obsidian-linker-icon.png
 **/*.map
+**/*.vsix

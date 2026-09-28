@@ -30,6 +30,26 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand(CMD_CREATE, createNoteArgs),
     vscode.commands.registerCommand(CMD_OBSIDIAN, openInObsidian),
   );
+
+  const statusItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 50);
+  statusItem.name = 'Obsidian Linker';
+  statusItem.text = '$(book) Obsidian';
+  statusItem.tooltip = 'Open current file in Obsidian';
+  statusItem.command = CMD_OBSIDIAN;
+  const updateStatusItem = () => {
+    const editor = vscode.window.activeTextEditor;
+    if (editor && editor.document.languageId === 'markdown' && editor.document.uri.scheme === 'file') {
+      statusItem.show();
+    } else {
+      statusItem.hide();
+    }
+  };
+  context.subscriptions.push(
+    statusItem,
+    vscode.window.onDidChangeActiveTextEditor(() => updateStatusItem()),
+    vscode.workspace.onDidSaveTextDocument(() => updateStatusItem()),
+  );
+  updateStatusItem();
 }
 
 export function deactivate(): void {
@@ -107,20 +127,10 @@ export async function openInObsidian(fileArg?: unknown): Promise<void> {
     return;
   }
   const vaultName = vscode.workspace.getConfiguration('obsidian-linker').get<string>('vaultName', '');
-  if (!vaultName.trim()) {
-    const pick = await vscode.window.showErrorMessage(
-      '"obsidian-linker.vaultName" is not configured. Set your Obsidian vault name first.',
-      'Open Settings',
-    );
-    if (pick === 'Open Settings') {
-      await vscode.commands.executeCommand('workbench.action.openSettings', 'obsidian-linker.vaultName');
-    }
-    return;
-  }
   const url = buildObsidianUri(uri, vaultName);
   if (!url) {
     vscode.window.showInformationMessage(
-      'Open in Obsidian: cannot determine the path of this file inside the workspace.',
+      'Open in Obsidian: the current file must be a file on disk.',
     );
     return;
   }
