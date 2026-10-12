@@ -84,6 +84,7 @@ npm install
 npm run check    # tsc --noEmit 类型检查
 npm run compile  # esbuild 打包到 dist/
 npm run test     # 纯函数单元测试（node:test）
+npm run test:host # 真实 VS Code 预览与悬浮集成测试
 npm run watch    # 监听模式
 ```
 
