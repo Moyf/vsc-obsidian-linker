@@ -1,5 +1,7 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { imageEmbed } from './images';
+import { createPreview } from './vscode-preview';
 import { buildObsidianUri } from './obsidian';
 import { createNote, getOpenMode, NoteIndex, OpenMode, openNote } from './notes';
 import {
@@ -18,7 +20,7 @@ const CMD_OBSIDIAN = 'obsidian-linker.openInObsidian';
 
 let index: NoteIndex;
 
-export function activate(context: vscode.ExtensionContext): void {
+export async function activate(context: vscode.ExtensionContext) {
   index = new NoteIndex();
 
   context.subscriptions.push(
@@ -50,6 +52,7 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.workspace.onDidSaveTextDocument(() => updateStatusItem()),
   );
   updateStatusItem();
+  return createPreview(context, index);
 }
 
 export function deactivate(): void {
@@ -220,12 +223,19 @@ class WikilinkHoverProvider implements vscode.HoverProvider {
     md.isTrusted = { enabledCommands: [CMD_OPEN_LINK, CMD_OBSIDIAN, CMD_CREATE] };
 
     if (uri) {
-      const title = match.alias ?? (match.target || '(this note)');
+      const image = imageEmbed(match);
+      const title = image?.alt ?? match.alias ?? (match.target || '(this note)');
       md.appendMarkdown(`**${escapeMd(title)}**`);
       if (match.heading) {
         md.appendMarkdown(` → ${escapeMd(match.heading)}`);
       }
       md.appendMarkdown(`\n\n\`${escapeMd(relPathFor(uri))}\`\n\n`);
+      if (image) {
+        const dimensions = `|width=${Math.min(image.width ?? 320, 640)}`
+          + (image.height ? `,height=${Math.min(image.height, 480)}` : '');
+        const src = uri.toString().replace(/[()]/g, (char) => char === '(' ? '%28' : '%29');
+        md.appendMarkdown(`![${escapeMd(image.alt)}](${src}${dimensions})\n\n`);
+      }
       md.appendMarkdown(this.openButton(uri.toString(), 'Open', 'default'));
       md.appendMarkdown(' · ');
       md.appendMarkdown(this.openButton(uri.toString(), 'Open to the Side', 'split'));
@@ -260,5 +270,5 @@ function relPathFor(uri: vscode.Uri): string {
   if (!folder) {
     return uri.fsPath;
   }
-  return path.relative(path.dirname(folder.uri.fsPath), uri.fsPath).split(path.sep).join('/');
+  return path.relative(folder.uri.fsPath, uri.fsPath).split(path.sep).join('/');
 }

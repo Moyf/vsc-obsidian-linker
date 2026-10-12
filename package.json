@@ -2,7 +2,7 @@
   "name": "obsidian-linker",
   "displayName": "Obsidian Linker",
   "description": "Obsidian-style [[wikilinks]] for VS Code: Ctrl/Cmd+Click to open notes (new tab / split), hover actions, and open the current file in Obsidian.",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "publisher": "Moy",
   "icon": "icon.png",
   "license": "MIT",
@@ -27,6 +27,7 @@
   ],
   "main": "./dist/extension.js",
   "contributes": {
+    "markdown.markdownItPlugins": true,
     "configuration": {
       "title": "Obsidian Linker",
       "properties": {
@@ -123,14 +124,18 @@
     "compile": "node ./esbuild.js",
     "watch": "node ./esbuild.js --watch",
     "check": "tsc --noEmit",
-    "test": "node ./esbuild.js --tests && node --test out-test/test/wikilink.test.js",
+    "test": "node ./esbuild.js --tests && node --test out-test/test/*.test.js",
+    "test:host": "node ./esbuild.js --tests && node scripts/test-host.cjs",
     "package": "node ./esbuild.js --production",
     "vscode:prepublish": "npm run package"
   },
   "devDependencies": {
+    "@vscode/test-electron": "^2.5.2",
+    "@types/markdown-it": "^14.1.2",
     "@types/node": "^20.14.0",
     "@types/vscode": "^1.80.0",
     "esbuild": "^0.23.1",
+    "markdown-it": "^14.1.0",
     "typescript": "^5.5.4"
   }
 }

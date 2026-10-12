@@ -21,6 +21,7 @@ Write Obsidian-style double links in Markdown files, then hold `Ctrl` (`Cmd` on 
 - Links render as clickable, with a hover card showing the resolved path plus action buttons
 - Supports `#heading` anchors (auto-scrolls after opening), `#^block-id` references, `|aliases`, and percent-encoded paths
 - Supports embeds `![[...]]`, including non-Markdown files such as images
+- Image embeds render in editor hover cards and the built-in Markdown Preview (`Ctrl+Shift+V`). Supports PNG, JPEG, GIF, WebP, SVG, BMP, AVIF, and `![[image.png|300]]` / `![[image.png|300x200]]` sizing. Attachment lookup respects the index settings below.
 - `[[...]]` inside fenced or inline code is ignored
 - Unresolved links offer a one-click **Create note** action on hover
 
@@ -46,7 +47,7 @@ Applies to Ctrl/Cmd+Click, the command, and the hover buttons. (After changing t
 
 - Command palette: `Obsidian Linker: Open Current File in Obsidian`
 - Editor title button (top-right book icon, visible for Markdown files)
-- Status bar item `$(book) Obsidian` (bottom-right, visible for Markdown files)
+- Status bar item `$(ruby) Obsidian` (bottom-right, visible for Markdown files)
 - Right-click context menu
 - `Open in Obsidian` button on the link hover card
 
@@ -82,6 +83,7 @@ npm install
 npm run check    # tsc --noEmit type check
 npm run compile  # esbuild bundle to dist/
 npm run test     # unit tests (node:test)
+npm run test:host # native Markdown preview and hover integration tests
 npm run watch    # watch mode
 ```
 
