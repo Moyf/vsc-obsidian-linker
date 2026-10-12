@@ -7,14 +7,14 @@ export interface WikilinkParts {
 }
 
 export interface WikilinkMatch extends WikilinkParts {
-  /** Start offset of `[[` in the line. */
+  /** Start offset of `[[` or `![[` in the line. */
   start: number;
   /** End offset (exclusive) of `]]` in the line. */
   end: number;
   raw: string;
 }
 
-const WIKILINK_RE = /\[\[([^\[\]\n]+?)\]\]/g;
+const WIKILINK_RE = /!?\[\[([^\[\]\n]+?)\]\]/g;
 
 function safeDecode(text: string): string {
   try {
