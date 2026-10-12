@@ -20,7 +20,8 @@ export function extendImagePreview(
     }
     if (!silent) {
       const token = state.push('image', 'img', 0);
-      token.attrSet('src', md.normalizeLink(match.target.replace(/\\/g, '/')));
+      token.attrSet('src', '');
+      token.attrSet('data-obsidian-raw', match.raw);
       token.attrSet('alt', '');
       token.attrSet('data-obsidian-target', match.target);
       if (image.width) token.attrSet('width', String(image.width));
@@ -38,14 +39,22 @@ export function extendImagePreview(
   // Keep the native image renderer so VS Code handles webview URIs and image tracking.
   const renderInline = md.renderer.renderInline.bind(md.renderer);
   md.renderer.renderInline = (tokens, options, env: unknown) => {
-    for (const token of tokens) {
+    const renderedTokens = tokens.map((token) => {
       const target = token.attrGet('data-obsidian-target');
       if (target) {
-        token.attrSet('src', resolve(target, env) ?? md.normalizeLink(target.replace(/\\/g, '/')));
+        const src = resolve(target, env);
+        if (!src) {
+          token.type = 'text';
+          token.content = token.attrGet('data-obsidian-raw') ?? '';
+          return token;
+        }
+        token.type = 'image';
+        token.attrSet('src', src);
         token.attrs = token.attrs?.filter(([name]) => name !== 'data-src') ?? null;
       }
-    }
-    return renderInline(tokens, options, env);
+      return token;
+    });
+    return renderInline(renderedTokens, options, env);
   };
   return md;
 }

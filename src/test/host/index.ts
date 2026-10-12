@@ -12,6 +12,7 @@ export async function run(): Promise<void> {
   await vscode.workspace.fs.writeFile(image, Buffer.from(
     'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aN3sAAAAASUVORK5CYII=', 'base64'));
   const note = vscode.Uri.joinPath(folder, 'note.md');
+  await vscode.workspace.fs.writeFile(vscode.Uri.joinPath(folder, 'same.png'), await vscode.workspace.fs.readFile(image));
   await vscode.workspace.fs.writeFile(note, Buffer.from('![[preview.png|300x200]]\n\n`![[preview.png]]`'));
   const doc = await vscode.workspace.openTextDocument(note);
   const duplicate = vscode.Uri.joinPath(root, 'duplicate.png');
@@ -56,5 +57,11 @@ export async function run(): Promise<void> {
   const filteredHtml = await vscode.commands.executeCommand<string>('markdown.api.render', doc);
   // Then: no resolved attachment URI bypasses the user's index setting.
   assert.ok(filteredHtml && !filteredHtml.includes(image.toString()));
+  const sameNote = vscode.Uri.joinPath(folder, 'same.md');
+  await vscode.workspace.fs.writeFile(sameNote, Buffer.from('![[same.png]] ![[javascript:alert.png]] ![[https://example.com/image.png]]'));
+  const sameDoc = await vscode.workspace.openTextDocument(sameNote);
+  const sameHtml = await vscode.commands.executeCommand<string>('markdown.api.render', sameDoc);
+  assert.ok(sameHtml);
+  assert.doesNotMatch(sameHtml, /<img/);
   console.log('HOST QA PASSED: native Markdown preview and image hover');
 }
