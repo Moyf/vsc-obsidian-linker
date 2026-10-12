@@ -21,6 +21,7 @@
 - 链接自动渲染为可点击样式，悬浮显示目标路径与操作按钮
 - 支持 `#标题` 锚点（打开后自动滚动到对应标题）、`#^block-id` 块引用、`|别名`、URL 编码路径
 - 支持嵌入语法 `![[...]]`（含图片等非 Markdown 文件）
+- 图片嵌入会在编辑器悬浮卡片和内置 Markdown Preview（`Ctrl+Shift+V`）中显示。支持 PNG、JPEG、GIF、WebP、SVG、BMP、AVIF 和 `![[image.png|300]]` / `![[image.png|300x200]]` 尺寸写法；附件查找遵循下方索引配置。
 - 代码块 / 行内代码中的 `[[...]]` 不会被识别为链接
 - 未找到目标笔记时，悬浮提示可一键 **Create note**（在当前工作区根目录下创建）
 
@@ -47,7 +48,7 @@
 
 - 命令面板：`Obsidian Linker: Open Current File in Obsidian`
 - 编辑器右上角书籍图标按钮（仅 Markdown 文件显示）
-- 状态栏右下角 `$(book) Obsidian` 按钮（仅 Markdown 文件显示）
+- 状态栏右下角 `$(ruby) Obsidian` 按钮（仅 Markdown 文件显示）
 - 右键菜单 → `Obsidian Linker: Open Current File in Obsidian`
 - 悬浮链接上的 `Open in Obsidian` 按钮
 
