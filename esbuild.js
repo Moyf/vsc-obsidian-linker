@@ -7,7 +7,7 @@ const tests = process.argv.includes('--tests');
 async function main() {
   const options = tests
     ? {
-        entryPoints: ['src/test/*.test.ts', 'src/wikilink.ts'],
+        entryPoints: ['src/test/*.test.ts', 'src/test/host/index.ts', 'src/wikilink.ts', 'src/images.ts', 'src/preview.ts'],
         outdir: 'out-test',
         outbase: 'src',
         bundle: false,
