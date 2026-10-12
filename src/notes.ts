@@ -120,7 +120,7 @@ export class NoteIndex implements vscode.Disposable {
     return this.building;
   }
 
-  private async ensureReady(): Promise<void> {
+  async prepare(): Promise<void> {
     while (!this.entries) {
       await this.buildOnce();
       if (!this.entries) {
@@ -131,9 +131,13 @@ export class NoteIndex implements vscode.Disposable {
   }
 
   async resolve(target: string, from?: vscode.Uri): Promise<vscode.Uri | undefined> {
-    await this.ensureReady();
-    const entries = this.entries!;
-    if (!entries.length) {
+    await this.prepare();
+    return this.resolveCached(target, from);
+  }
+
+  resolveCached(target: string, from?: vscode.Uri): vscode.Uri | undefined {
+    const entries = this.entries;
+    if (!entries?.length) {
       return undefined;
     }
 
