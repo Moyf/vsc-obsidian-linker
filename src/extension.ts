@@ -1,8 +1,10 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { imageEmbed } from './images';
+import { registerWikilinkCompletion } from './completion';
+import { t } from './i18n';
 import { createPreview } from './vscode-preview';
-import { buildObsidianUri } from './obsidian';
+import { openFileInObsidian } from './obsidian';
 import { createNote, getOpenMode, NoteIndex, OpenMode, openNote } from './notes';
 import {
   fenceMarkerOf,
@@ -17,11 +19,15 @@ const CMD_OPEN = 'obsidian-linker.open';
 const CMD_OPEN_LINK = 'obsidian-linker.openLink';
 const CMD_CREATE = 'obsidian-linker.createNote';
 const CMD_OBSIDIAN = 'obsidian-linker.openInObsidian';
+const CMD_OBSIDIAN_CURRENT = 'obsidian-linker.openCurrentInObsidian';
+const CMD_OPEN_FOLDER = 'workbench.action.files.openFolder';
+const CMD_SETTINGS = 'workbench.action.openSettings';
 
 let index: NoteIndex;
 
 export async function activate(context: vscode.ExtensionContext) {
   index = new NoteIndex();
+  registerWikilinkCompletion(context, index);
 
   context.subscriptions.push(
     index,
@@ -31,13 +37,22 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand(CMD_OPEN_LINK, openLinkArgs),
     vscode.commands.registerCommand(CMD_CREATE, createNoteArgs),
     vscode.commands.registerCommand(CMD_OBSIDIAN, openInObsidian),
+    vscode.commands.registerCommand(CMD_OBSIDIAN_CURRENT, openCurrentInObsidian),
   );
 
   const statusItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 50);
   statusItem.name = 'Obsidian Linker';
   statusItem.text = '$(ruby) Obsidian';
   statusItem.tooltip = 'Open current file in Obsidian';
-  statusItem.command = CMD_OBSIDIAN;
+  statusItem.command = CMD_OBSIDIAN_CURRENT;
+  const indexStatus = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 49);
+  indexStatus.name = t('Obsidian Linker workspace', 'Obsidian Linker 工作区');
+  indexStatus.text = t('$(warning) Wikilinks: open folder', '$(warning) 双链：打开文件夹');
+  indexStatus.tooltip = t(
+    'File wikilinks use an in-memory index of the open workspace folders. Open your notes folder to enable cross-file navigation and previews.',
+    '跨文件双链依赖已打开工作区文件夹的内存索引。打开你的笔记文件夹即可启用跨文件跳转与预览。',
+  );
+  indexStatus.command = CMD_OPEN_FOLDER;
   const updateStatusItem = () => {
     const editor = vscode.window.activeTextEditor;
     if (editor && editor.document.languageId === 'markdown' && editor.document.uri.scheme === 'file') {
@@ -45,11 +60,18 @@ export async function activate(context: vscode.ExtensionContext) {
     } else {
       statusItem.hide();
     }
+    if (editor?.document.languageId === 'markdown' && !vscode.workspace.workspaceFolders?.length) {
+      indexStatus.show();
+    } else {
+      indexStatus.hide();
+    }
   };
   context.subscriptions.push(
     statusItem,
+    indexStatus,
     vscode.window.onDidChangeActiveTextEditor(() => updateStatusItem()),
     vscode.workspace.onDidSaveTextDocument(() => updateStatusItem()),
+    vscode.workspace.onDidChangeWorkspaceFolders(() => updateStatusItem()),
   );
   updateStatusItem();
   return createPreview(context, index);
@@ -117,27 +139,52 @@ async function createNoteArgs(target?: string, fromUriStr?: string): Promise<voi
 
 async function offerCreate(match: WikilinkMatch, fromUri: vscode.Uri): Promise<void> {
   const label = match.target || match.heading || 'note';
-  const pick = await vscode.window.showWarningMessage(`Note not found: "${label}"`, 'Create note');
-  if (pick === 'Create note') {
+  if (!vscode.workspace.workspaceFolders?.length) {
+    const pick = await vscode.window.showInformationMessage(
+      index.missingMessage(label, fromUri), t('Open Folder', '打开文件夹'));
+    if (pick === t('Open Folder', '打开文件夹')) await vscode.commands.executeCommand(CMD_OPEN_FOLDER);
+    return;
+  }
+  const create = t('Create note', '创建笔记');
+  const settings = t('Index Settings', '索引设置');
+  const pick = await vscode.window.showWarningMessage(index.missingMessage(label, fromUri), create, settings);
+  if (pick === create) {
     await createNoteArgs(match.target || label, fromUri.toString());
+  } else if (pick === settings) {
+    await vscode.commands.executeCommand(CMD_SETTINGS, 'obsidian-linker.index');
   }
 }
 
 export async function openInObsidian(fileArg?: unknown): Promise<void> {
+  const uri =
+    argToUri(fileArg) ?? (await linkedUriUnderCursor()) ?? argToUri(vscode.window.activeTextEditor?.document.uri);
+  if (!uri) {
+    vscode.window.showInformationMessage('Open in Obsidian: the current file must be a file on disk.');
+    return;
+  }
+  await openFileInObsidian(uri);
+}
+
+export async function openCurrentInObsidian(fileArg?: unknown): Promise<void> {
   const uri = argToUri(fileArg) ?? argToUri(vscode.window.activeTextEditor?.document.uri);
   if (!uri) {
     vscode.window.showInformationMessage('Open in Obsidian: the current file must be a file on disk.');
     return;
   }
-  const vaultName = vscode.workspace.getConfiguration('obsidian-linker').get<string>('vaultName', '');
-  const url = buildObsidianUri(uri, vaultName);
-  if (!url) {
-    vscode.window.showInformationMessage(
-      'Open in Obsidian: the current file must be a file on disk.',
-    );
-    return;
+  await openFileInObsidian(uri);
+}
+
+async function linkedUriUnderCursor(): Promise<vscode.Uri | undefined> {
+  const editor = vscode.window.activeTextEditor;
+  if (!editor || editor.document.uri.scheme !== 'file') {
+    return undefined;
   }
-  await vscode.env.openExternal(vscode.Uri.parse(url));
+  const pos = editor.selection.active;
+  const match = wikilinkAtOffset(editor.document.lineAt(pos.line).text, pos.character);
+  if (!match || (!match.target && !match.heading)) {
+    return undefined;
+  }
+  return resolveMatch(match, editor.document);
 }
 
 function argToUri(arg: unknown): vscode.Uri | undefined {
@@ -183,7 +230,7 @@ class WikilinkLinkProvider implements vscode.DocumentLinkProvider {
         if (isInsideInlineCode(text, match.start)) {
           continue;
         }
-        if (!match.target && !match.heading) {
+        if (!match.target && !match.heading && !match.blockId) {
           continue;
         }
         const range = new vscode.Range(ln, match.start, ln, match.end);
@@ -214,13 +261,13 @@ class WikilinkHoverProvider implements vscode.HoverProvider {
   async provideHover(doc: vscode.TextDocument, pos: vscode.Position): Promise<vscode.Hover | undefined> {
     const line = doc.lineAt(pos.line);
     const match = wikilinkAtOffset(line.text, pos.character);
-    if (!match || (!match.target && !match.heading)) {
+    if (!match || (!match.target && !match.heading && !match.blockId)) {
       return undefined;
     }
 
     const uri = await resolveMatch(match, doc);
     const md = new vscode.MarkdownString();
-    md.isTrusted = { enabledCommands: [CMD_OPEN_LINK, CMD_OBSIDIAN, CMD_CREATE] };
+    md.isTrusted = { enabledCommands: [CMD_OPEN_LINK, CMD_OBSIDIAN, CMD_CREATE, CMD_OPEN_FOLDER, CMD_SETTINGS] };
 
     if (uri) {
       const image = imageEmbed(match);
@@ -244,10 +291,16 @@ class WikilinkHoverProvider implements vscode.HoverProvider {
         `[Open in Obsidian](command:${CMD_OBSIDIAN}?${enc([uri.toString()])} "Open in Obsidian")`,
       );
     } else {
-      md.appendMarkdown(`Note not found: **${escapeMd(match.target)}**\n\n`);
-      md.appendMarkdown(
-        `[Create note](command:${CMD_CREATE}?${enc([match.target, doc.uri.toString()])} "Create note")`,
-      );
+      md.appendText(index.missingMessage(match.target, doc.uri));
+      md.appendMarkdown('\n\n');
+      if (!vscode.workspace.workspaceFolders?.length) {
+        md.appendMarkdown(`[${t('Open Folder', '打开文件夹')}](command:${CMD_OPEN_FOLDER} "Open your notes folder")`);
+      } else {
+        md.appendMarkdown(`[${t('Index Settings', '索引设置')}](command:${CMD_SETTINGS}?${enc(['obsidian-linker.index'])} "Check index settings") · `);
+        md.appendMarkdown(
+          `[${t('Create note', '创建笔记')}](command:${CMD_CREATE}?${enc([match.target, doc.uri.toString()])} "Create note")`,
+        );
+      }
     }
     return new vscode.Hover(md, new vscode.Range(pos.line, match.start, pos.line, match.end));
   }
