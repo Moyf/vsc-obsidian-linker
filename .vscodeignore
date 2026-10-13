@@ -1,8 +1,12 @@
 .vscode/**
+.vscode-test/**
+.codegraph/**
+.omo/**
 src/**
 scripts/**
 out-test/**
 node_modules/**
+examples/**
 esbuild.js
 .gitignore
 .gitattributes
