@@ -1,5 +1,6 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { t } from './i18n';
 
 export type OpenMode = 'default' | 'newTab' | 'split';
 
@@ -31,6 +32,14 @@ interface Entry {
   isMd: boolean;
 }
 
+export interface NoteSuggestion {
+  uri: vscode.Uri;
+  label: string;
+  target: string;
+  description: string;
+  isMd: boolean;
+}
+
 export class NoteIndex implements vscode.Disposable {
   private entries: Entry[] | undefined;
   private byBase = new Map<string, number[]>();
@@ -39,9 +48,17 @@ export class NoteIndex implements vscode.Disposable {
   private building: Promise<void> | undefined;
   private epoch = 0;
   private readonly disposables: vscode.Disposable[] = [];
+  private readonly invalidated = new vscode.EventEmitter<void>();
+  readonly onDidInvalidate = this.invalidated.event;
 
   constructor() {
+    const watcher = vscode.workspace.createFileSystemWatcher('**/*', false, true, false);
     this.disposables.push(
+      this.invalidated,
+      watcher,
+      watcher.onDidCreate(() => this.invalidate()),
+      watcher.onDidDelete(() => this.invalidate()),
+      vscode.workspace.onDidChangeWorkspaceFolders(() => this.invalidate()),
       vscode.workspace.onDidCreateFiles(() => this.invalidate()),
       vscode.workspace.onDidDeleteFiles(() => this.invalidate()),
       vscode.workspace.onDidRenameFiles(() => this.invalidate()),
@@ -72,6 +89,7 @@ export class NoteIndex implements vscode.Disposable {
     this.byStem.clear();
     this.byRel.clear();
     this.building = undefined;
+    this.invalidated.fire();
   }
 
   private buildOnce(): Promise<void> {
@@ -133,6 +151,54 @@ export class NoteIndex implements vscode.Disposable {
   async resolve(target: string, from?: vscode.Uri): Promise<vscode.Uri | undefined> {
     await this.prepare();
     return this.resolveCached(target, from);
+  }
+
+  async suggest(prefix: string, from: vscode.Uri): Promise<NoteSuggestion[]> {
+    await this.prepare();
+    const query = prefix.replace(/\\/g, '/').replace(/^\.?\//, '').toLowerCase();
+    const byPath = query.includes('/');
+    const suggestions: NoteSuggestion[] = [];
+    const hits = this.entries!.flatMap((entry, i) =>
+      (byPath ? entry.rel : entry.base).startsWith(query) ? [i] : []);
+    const ranked = this.rank(hits, from);
+    const entriesByUri = new Map(this.entries!.map((entry) => [entry.uri.toString(), entry]));
+    for (const uri of ranked) {
+      const entry = entriesByUri.get(uri.toString())!;
+      const label = path.basename(uri.fsPath);
+      // Wikilink syntax has no escaping for these filename characters.
+      if (/[\[\]#|\r\n]/.test(label)) continue;
+      const folder = vscode.workspace.getWorkspaceFolder(uri)!;
+      const description = path.relative(folder.uri.fsPath, uri.fsPath).split(path.sep).join('/');
+      let target = entry.isMd ? label.slice(0, -3) : label;
+      if (this.resolveCached(target, from)?.toString() !== uri.toString()) target = label;
+      if (byPath || this.resolveCached(target, from)?.toString() !== uri.toString()) {
+        target = entry.isMd && !/\.[a-z0-9]+$/i.test(description.slice(0, -3))
+          ? description.slice(0, -3) : description;
+      }
+      // A path can still be ambiguous across workspace roots. Never suggest the wrong file.
+      if (/[\[\]#|\r\n]/.test(target) || this.resolveCached(target, from)?.toString() !== uri.toString()) continue;
+      suggestions.push({ uri, label, target: target.replace(/%/g, '%25'), description: `${folder.name}/${description}`, isMd: entry.isMd });
+    }
+    return suggestions.filter((item) => item.isMd).concat(suggestions.filter((item) => !item.isMd));
+  }
+
+  missingMessage(_target: string, from?: vscode.Uri): string {
+    if (!vscode.workspace.workspaceFolders?.length) {
+      return t(
+        'Open a folder or workspace containing your notes to resolve file wikilinks.',
+        '请先打开包含笔记的文件夹或工作区，才能解析跨文件双链。',
+      );
+    }
+    if (from && !vscode.workspace.getWorkspaceFolder(from)) {
+      return t(
+        'Only files inside the open workspace folders are indexed. Open the folder containing the target.',
+        '只会索引已打开工作区内的文件。请打开目标笔记所在的文件夹。',
+      );
+    }
+    return t(
+      'Target not found in the workspace index. Check the path, exclude settings, and Obsidian Linker index settings.',
+      '未在工作区索引中找到目标笔记。请检查链接路径、排除规则以及 Obsidian Linker 的索引设置。',
+    );
   }
 
   resolveCached(target: string, from?: vscode.Uri): vscode.Uri | undefined {
@@ -213,6 +279,10 @@ export async function openNote(
   mode: OpenMode,
   heading?: string,
 ): Promise<vscode.TextEditor | undefined> {
+  if (/\.(png|jpe?g|gif|webp|svg|bmp|avif|pdf)$/i.test(uri.path)) {
+    await vscode.commands.executeCommand('vscode.open', uri, { viewColumn: mode === 'split' ? vscode.ViewColumn.Beside : vscode.ViewColumn.Active, preview: mode === 'default' });
+    return undefined;
+  }
   const options: vscode.TextDocumentShowOptions =
     mode === 'split'
       ? { viewColumn: vscode.ViewColumn.Beside, preview: false }

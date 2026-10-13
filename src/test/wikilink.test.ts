@@ -18,6 +18,12 @@ test('parses alias', () => {
   assert.equal(m.alias, 'My Alias');
 });
 
+test('parses the escaped alias separator used in Markdown tables', () => {
+  const [m] = findWikilinksInLine('[[folder/Note\\|My Alias]]');
+  assert.equal(m.target, 'folder/Note');
+  assert.equal(m.alias, 'My Alias');
+});
+
 test('parses heading anchor and alias together', () => {
   const [m] = findWikilinksInLine('[[Note#Section|a]]');
   assert.equal(m.target, 'Note');

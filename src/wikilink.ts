@@ -32,7 +32,8 @@ export function parseWikilinkText(inside: string): WikilinkParts {
   if (pipe >= 0) {
     const rawAlias = body.slice(pipe + 1).trim();
     alias = rawAlias ? safeDecode(rawAlias) : undefined;
-    body = body.slice(0, pipe);
+    // Markdown tables escape alias separators as \| to keep them inside one cell.
+    body = body.slice(0, pipe).replace(/\\$/, '');
   }
 
   let blockId: string | undefined;

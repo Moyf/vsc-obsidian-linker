@@ -1,14 +1,29 @@
 import * as vscode from 'vscode';
+import * as path from 'path';
 
-/**
- * Builds an Obsidian URI for the official `open` action using an absolute path:
- *   obsidian://open?vault=<vaultName>&path=<absolute-fs-path>
- *
- * Per Obsidian docs the `file` parameter is vault-relative; absolute file system
- * paths must use the `path` parameter (Obsidian resolves the vault itself).
- * `vaultName` is optional: when empty, Obsidian resolves the vault from the path.
- */
-export function buildObsidianUri(fileUri: vscode.Uri, vaultName: string): string | undefined {
+export async function openFileInObsidian(fileUri: vscode.Uri): Promise<void> {
+  const vaultName = vscode.workspace.getConfiguration('obsidian-linker').get<string>('vaultName', '');
+  const insideVault = await isInsideVault(fileUri);
+  const url = buildObsidianUri(fileUri, vaultName, insideVault);
+  if (url) await vscode.env.openExternal(vscode.Uri.parse(url));
+}
+
+export async function isInsideVault(fileUri: vscode.Uri): Promise<boolean> {
+  let directory = path.dirname(fileUri.fsPath);
+  while (true) {
+    try {
+      const stat = await vscode.workspace.fs.stat(vscode.Uri.file(path.join(directory, '.obsidian')));
+      if (stat.type & vscode.FileType.Directory) return true;
+    } catch (error) {
+      if (!(error instanceof vscode.FileSystemError) || error.code !== 'FileNotFound') throw error;
+    }
+    const parent = path.dirname(directory);
+    if (parent === directory) return false;
+    directory = parent;
+  }
+}
+
+export function buildObsidianUri(fileUri: vscode.Uri, vaultName: string, insideVault = true): string | undefined {
   if (fileUri.scheme !== 'file') {
     return undefined;
   }
@@ -17,6 +32,7 @@ export function buildObsidianUri(fileUri: vscode.Uri, vaultName: string): string
   if (vault) {
     parts.push(`vault=${encodeURIComponent(vault)}`);
   }
-  parts.push(`path=${encodeURIComponent(fileUri.fsPath)}`);
+  const filePath = fileUri.fsPath.replace(/\\/g, '/');
+  parts.push(insideVault ? `path=${encodeURIComponent(filePath)}` : `file=${encodeURIComponent(`file:${filePath}`)}`);
   return `obsidian://open?${parts.join('&')}`;
 }
