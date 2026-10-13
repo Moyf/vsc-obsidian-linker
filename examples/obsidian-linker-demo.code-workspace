@@ -1,0 +1,11 @@
+{
+  "folders": [{ "name": "Obsidian Linker 示例库", "path": "demo-vault" }],
+  "settings": {
+    "obsidian-linker.indexOnlyMarkdown": false,
+    "obsidian-linker.indexExclude": ["隐藏笔记/**"],
+    "obsidian-linker.indexLimit": 0,
+    "markdown.preview.openMarkdownLinks": "inPreview",
+    "editor.wordWrap": "on",
+    "editor.suggestOnTriggerCharacters": true
+  }
+}

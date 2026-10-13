@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="240" viewBox="0 0 960 240">
+  <rect width="960" height="240" rx="24" fill="#111c32"/>
+  <path d="M276 120H354M604 120H682" stroke="#7898c7" stroke-width="3"/>
+  <path d="m344 110 10 10-10 10m328-20 10 10-10 10" fill="none" stroke="#7898c7" stroke-width="3"/>
+  <g font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" text-anchor="middle">
+    <rect x="36" y="44" width="240" height="152" rx="18" fill="#193a4d" stroke="#64cbbd"/>
+    <circle cx="156" cy="84" r="8" fill="#64cbbd"/>
+    <text x="156" y="130" font-size="28" fill="#eaf7f5">捕捉灵感</text>
+    <text x="156" y="163" font-size="16" fill="#a2c6c5">从一个句子开始</text>
+    <rect x="354" y="44" width="250" height="152" rx="18" fill="#273a61" stroke="#94baff"/>
+    <circle cx="479" cy="84" r="8" fill="#94baff"/>
+    <text x="479" y="130" font-size="28" fill="#eef3ff">连接笔记</text>
+    <text x="479" y="163" font-size="16" fill="#aebfe0">让想法彼此呼应</text>
+    <rect x="682" y="44" width="242" height="152" rx="18" fill="#413555" stroke="#caa8e8"/>
+    <circle cx="803" cy="84" r="8" fill="#caa8e8"/>
+    <text x="803" y="130" font-size="28" fill="#f4eefb">回到行动</text>
+    <text x="803" y="163" font-size="16" fill="#c9b8dc">选择下一步</text>
+  </g>
+</svg>
