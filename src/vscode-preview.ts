@@ -1,32 +1,46 @@
 import * as vscode from 'vscode';
+import * as path from 'path';
 import type MarkdownIt from 'markdown-it';
 import type { NoteIndex } from './notes';
-import { extendImagePreview } from './preview';
+import { extendPreview } from './preview';
+import { previewLinkAttributes, registerPreviewActions } from './preview-actions';
+import { t } from './i18n';
+
+function currentDocument(env: unknown): vscode.Uri | undefined {
+  return env && typeof env === 'object' && 'currentDocument' in env
+    && env.currentDocument instanceof vscode.Uri ? env.currentDocument : undefined;
+}
 
 export async function createPreview(context: vscode.ExtensionContext, index: NoteIndex) {
+  registerPreviewActions(context, index);
   const refreshPreview = async () => {
     await index.prepare();
     await vscode.commands.executeCommand('markdown.api.reloadPlugins');
   };
   context.subscriptions.push(
-    vscode.workspace.onDidCreateFiles(refreshPreview),
-    vscode.workspace.onDidDeleteFiles(refreshPreview),
-    vscode.workspace.onDidRenameFiles(refreshPreview),
-    vscode.workspace.onDidChangeConfiguration((e) => {
-      if (e.affectsConfiguration('files.exclude') || e.affectsConfiguration('search.exclude')
-        || e.affectsConfiguration('obsidian-linker.indexOnlyMarkdown')
-        || e.affectsConfiguration('obsidian-linker.indexExclude')
-        || e.affectsConfiguration('obsidian-linker.indexLimit')) {
-        void refreshPreview();
-      }
-    }),
+    index.onDidInvalidate(refreshPreview),
   );
   await index.prepare();
   return {
-    extendMarkdownIt: (md: MarkdownIt) => extendImagePreview(md, (target, env) => {
-      const from = env && typeof env === 'object' && 'currentDocument' in env
-        && env.currentDocument instanceof vscode.Uri ? env.currentDocument : undefined;
-      return index.resolveCached(target, from)?.toString();
+    extendMarkdownIt: (md: MarkdownIt) => extendPreview(md, (target, env, kind) => {
+      const from = currentDocument(env);
+      if (!target && kind === 'link') return from ? '#' : undefined;
+      const uri = index.resolveCached(target, from);
+      if (!uri) return undefined;
+      if (kind === 'image') return uri.toString();
+      if (!from || from.scheme !== uri.scheme || from.authority !== uri.authority) return undefined;
+      // Relative links go through the Markdown preview's native openLink handler.
+      // file: links bypass that handler in some supported VS Code versions.
+      const relative = path.posix.relative(path.posix.dirname(from.path), uri.path);
+      return './' + relative.split('/').map(encodeURIComponent).join('/');
+    }, (target, env) => index.missingMessage(target, currentDocument(env)), (match, env) => {
+      const from = currentDocument(env);
+      return from ? previewLinkAttributes(context.extension.id, from, match.target, match.heading) : {};
+    }, {
+      blockRefTooltip: t(
+        'Block references open the file; exact block navigation is not supported.',
+        '块引用当前只会打开所在文件，暂不支持定位到具体块。',
+      ),
     }),
   };
 }

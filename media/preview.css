@@ -1,0 +1,7 @@
+a.obsidian-link-unresolved,
+a.obsidian-link-unresolved:hover,
+a.obsidian-link-unresolved:focus {
+  color: var(--vscode-descriptionForeground, #888);
+  text-decoration: underline dotted;
+  cursor: help;
+}
